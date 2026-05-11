@@ -8,6 +8,7 @@ type GameState = {
   players: Player[];
   currentMatch: Match | null;
   currentLineupIndex: number | null; // which of the 3 partitions is showing
+  currentCourtIds: [string, string, string, string] | null; // court players for re-roll
   history: Match[]; // completed matches, newest first
   teammateHistory: HistoryMap;
   opponentHistory: HistoryMap;
@@ -32,6 +33,7 @@ const initialState: GameState = {
   players: [],
   currentMatch: null,
   currentLineupIndex: null,
+  currentCourtIds: null,
   history: [],
   teammateHistory: {},
   opponentHistory: {},
@@ -51,6 +53,7 @@ export const useGameStore = create<GameState & GameActions>()(
           score: 0,
           benchCount: 0,
           gamesPlayed: 0,
+          playStreak: 0,
           lastBenched: false,
           active: true,
         };
@@ -69,6 +72,7 @@ export const useGameStore = create<GameState & GameActions>()(
             players,
             currentMatch: inMatch ? null : s.currentMatch,
             currentLineupIndex: inMatch ? null : s.currentLineupIndex,
+            currentCourtIds: inMatch ? null : s.currentCourtIds,
           };
         });
       },
@@ -88,6 +92,7 @@ export const useGameStore = create<GameState & GameActions>()(
             ),
             currentMatch: inMatch ? null : s.currentMatch,
             currentLineupIndex: inMatch ? null : s.currentLineupIndex,
+            currentCourtIds: inMatch ? null : s.currentCourtIds,
           };
         });
       },
@@ -115,7 +120,7 @@ export const useGameStore = create<GameState & GameActions>()(
         });
 
         if (!result) return;
-        set({ currentMatch: result.match, currentLineupIndex: result.lineupIndex });
+        set({ currentMatch: result.match, currentLineupIndex: result.lineupIndex, currentCourtIds: result.courtIds });
       },
 
       rerollMatch() {
@@ -133,10 +138,11 @@ export const useGameStore = create<GameState & GameActions>()(
           opponentHistory: s.opponentHistory,
           prevBenchIds,
           excludeLineupIndexes: excludeIndexes,
+          lockedCourtIds: s.currentCourtIds,
         });
 
         if (!result) return;
-        set({ currentMatch: result.match, currentLineupIndex: result.lineupIndex });
+        set({ currentMatch: result.match, currentLineupIndex: result.lineupIndex, currentCourtIds: result.courtIds });
       },
 
       submitResult(winner: 1 | 2) {
@@ -161,6 +167,7 @@ export const useGameStore = create<GameState & GameActions>()(
           history: [match, ...s.history],
           currentMatch: null,
           currentLineupIndex: null,
+          currentCourtIds: null,
         });
       },
 
@@ -195,6 +202,7 @@ export const useGameStore = create<GameState & GameActions>()(
           history: rest,
           currentMatch: { ...last, winner: undefined },
           currentLineupIndex: null,
+          currentCourtIds: null,
         });
       },
 
@@ -206,11 +214,13 @@ export const useGameStore = create<GameState & GameActions>()(
             score: 0,
             benchCount: 0,
             gamesPlayed: 0,
+            playStreak: 0,
             lastBenched: false,
             active: true,
           })),
           currentMatch: null,
           currentLineupIndex: null,
+          currentCourtIds: null,
           history: [],
           teammateHistory: {},
           opponentHistory: {},
@@ -223,10 +233,10 @@ export const useGameStore = create<GameState & GameActions>()(
     }),
     {
       name: 'badminton-randomizer-v1',
-      version: 3,
+      version: 4,
       migrate(persisted: unknown, fromVersion: number) {
         const state = persisted as GameState & { history: Match[] };
-        let players = (state.players ?? []) as (Player & { gamesPlayed?: number; active?: boolean })[];
+        let players = (state.players ?? []) as (Player & { gamesPlayed?: number; playStreak?: number; active?: boolean })[];
         if (fromVersion < 2) {
           players = players.map((p) => ({ ...p, active: p.active ?? true }));
         }
@@ -244,7 +254,14 @@ export const useGameStore = create<GameState & GameActions>()(
             gamesPlayed: p.gamesPlayed ?? counts.get(p.id) ?? 0,
           }));
         }
-        return { ...state, players };
+        if (fromVersion < 4) {
+          // Backfill playStreak: 0 (can't infer accurately from history alone)
+          players = players.map((p) => ({
+            ...p,
+            playStreak: p.playStreak ?? 0,
+          }));
+        }
+        return { ...state, players, currentCourtIds: null };
       },
     },
   ),

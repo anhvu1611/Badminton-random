@@ -3,8 +3,10 @@ export type Player = {
   name: string;
   score: number;
   benchCount: number;
-  /** Total matches played (excludes bench). Used for soft priority for late joiners. */
+  /** Total matches played (excludes bench). Displayed in leaderboard. */
   gamesPlayed: number;
+  /** Consecutive rounds played without a bench. Reset to 0 when benched. */
+  playStreak: number;
   lastBenched: boolean;
   /** false = player left early; kept for score/history but excluded from match generation */
   active: boolean;

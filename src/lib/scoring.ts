@@ -22,13 +22,13 @@ export function applyResult(
 
   const players = state.players.map((p): Player => {
     if (winnerTeam.includes(p.id)) {
-      return { ...p, score: p.score + 1, gamesPlayed: p.gamesPlayed + 1, lastBenched: false };
+      return { ...p, score: p.score + 1, gamesPlayed: p.gamesPlayed + 1, playStreak: p.playStreak + 1, lastBenched: false };
     }
     if (loserTeam.includes(p.id)) {
-      return { ...p, score: p.score - 1, gamesPlayed: p.gamesPlayed + 1, lastBenched: false };
+      return { ...p, score: p.score - 1, gamesPlayed: p.gamesPlayed + 1, playStreak: p.playStreak + 1, lastBenched: false };
     }
     if (match.bench.includes(p.id)) {
-      return { ...p, benchCount: p.benchCount + 1, lastBenched: true };
+      return { ...p, benchCount: p.benchCount + 1, playStreak: 0, lastBenched: true };
     }
     // Player not in this match at all (shouldn't happen in 1-court mode)
     return p;
@@ -67,12 +67,14 @@ export function revertResult(
 
   const players = state.players.map((p): Player => {
     if (winnerTeam.includes(p.id)) {
-      return { ...p, score: p.score - 1, gamesPlayed: Math.max(0, p.gamesPlayed - 1) };
+      // Decrement streak (was +1 during apply); floor at 0
+      return { ...p, score: p.score - 1, gamesPlayed: Math.max(0, p.gamesPlayed - 1), playStreak: Math.max(0, p.playStreak - 1) };
     }
     if (loserTeam.includes(p.id)) {
-      return { ...p, score: p.score + 1, gamesPlayed: Math.max(0, p.gamesPlayed - 1) };
+      return { ...p, score: p.score + 1, gamesPlayed: Math.max(0, p.gamesPlayed - 1), playStreak: Math.max(0, p.playStreak - 1) };
     }
     if (match.bench.includes(p.id)) {
+      // playStreak was reset to 0 by apply; we can't perfectly restore it, leave as-is
       return { ...p, benchCount: Math.max(0, p.benchCount - 1) };
     }
     return p;
