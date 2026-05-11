@@ -10,6 +10,8 @@ export type Player = {
   lastBenched: boolean;
   /** false = player left early; kept for score/history but excluded from match generation */
   active: boolean;
+  /** true = player voluntarily sits out the next round; reset after result submitted */
+  skippingRound: boolean;
 };
 
 export type Match = {

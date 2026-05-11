@@ -20,6 +20,8 @@ type GameActions = {
   removePlayer: (id: string) => void;
   /** Mark player inactive (left early) or active again (rejoined). Score/history kept. */
   setPlayerActive: (id: string, active: boolean) => void;
+  /** Toggle voluntary skip for the next round. Resets after result submitted. */
+  toggleSkipRound: (id: string) => void;
   renamePlayer: (id: string, newName: string) => void;
   generateNextMatch: () => void;
   rerollMatch: () => void;
@@ -56,6 +58,7 @@ export const useGameStore = create<GameState & GameActions>()(
           playStreak: 0,
           lastBenched: false,
           active: true,
+          skippingRound: false,
         };
         set((s) => ({ players: [...s.players, player] }));
       },
@@ -97,6 +100,14 @@ export const useGameStore = create<GameState & GameActions>()(
         });
       },
 
+      toggleSkipRound(id: string) {
+        set((s) => ({
+          players: s.players.map((p) =>
+            p.id === id ? { ...p, skippingRound: !p.skippingRound } : p,
+          ),
+        }));
+      },
+
       renamePlayer(id: string, newName: string) {
         const trimmed = newName.trim();
         if (!trimmed) return;
@@ -120,7 +131,14 @@ export const useGameStore = create<GameState & GameActions>()(
         });
 
         if (!result) return;
-        set({ currentMatch: result.match, currentLineupIndex: result.lineupIndex, currentCourtIds: result.courtIds });
+        const skippingIds = s.players
+          .filter((p) => p.active && p.skippingRound)
+          .map((p) => p.id);
+        const match = {
+          ...result.match,
+          bench: [...result.match.bench, ...skippingIds],
+        };
+        set({ currentMatch: match, currentLineupIndex: result.lineupIndex, currentCourtIds: result.courtIds });
       },
 
       rerollMatch() {
@@ -142,7 +160,14 @@ export const useGameStore = create<GameState & GameActions>()(
         });
 
         if (!result) return;
-        set({ currentMatch: result.match, currentLineupIndex: result.lineupIndex, currentCourtIds: result.courtIds });
+        const skippingIds = s.players
+          .filter((p) => p.active && p.skippingRound)
+          .map((p) => p.id);
+        const match = {
+          ...result.match,
+          bench: [...result.match.bench, ...skippingIds],
+        };
+        set({ currentMatch: match, currentLineupIndex: result.lineupIndex, currentCourtIds: result.courtIds });
       },
 
       submitResult(winner: 1 | 2) {
@@ -161,7 +186,7 @@ export const useGameStore = create<GameState & GameActions>()(
         );
 
         set({
-          players: updated.players,
+          players: updated.players.map((p) => ({ ...p, skippingRound: false })),
           teammateHistory: updated.teammateHistory,
           opponentHistory: updated.opponentHistory,
           history: [match, ...s.history],
@@ -217,6 +242,7 @@ export const useGameStore = create<GameState & GameActions>()(
             playStreak: 0,
             lastBenched: false,
             active: true,
+            skippingRound: false,
           })),
           currentMatch: null,
           currentLineupIndex: null,
@@ -233,7 +259,7 @@ export const useGameStore = create<GameState & GameActions>()(
     }),
     {
       name: 'badminton-randomizer-v1',
-      version: 4,
+      version: 5,
       migrate(persisted: unknown, fromVersion: number) {
         const state = persisted as GameState & { history: Match[] };
         let players = (state.players ?? []) as (Player & { gamesPlayed?: number; playStreak?: number; active?: boolean })[];
@@ -259,6 +285,12 @@ export const useGameStore = create<GameState & GameActions>()(
           players = players.map((p) => ({
             ...p,
             playStreak: p.playStreak ?? 0,
+          }));
+        }
+        if (fromVersion < 5) {
+          players = players.map((p) => ({
+            ...p,
+            skippingRound: (p as Player & { skippingRound?: boolean }).skippingRound ?? false,
           }));
         }
         return { ...state, players, currentCourtIds: null };

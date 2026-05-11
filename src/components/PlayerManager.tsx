@@ -6,6 +6,7 @@ export function PlayerManager() {
   const addPlayer = useGameStore((s) => s.addPlayer);
   const removePlayer = useGameStore((s) => s.removePlayer);
   const setPlayerActive = useGameStore((s) => s.setPlayerActive);
+  const toggleSkipRound = useGameStore((s) => s.toggleSkipRound);
   const renamePlayer = useGameStore((s) => s.renamePlayer);
   const currentMatch = useGameStore((s) => s.currentMatch);
 
@@ -61,7 +62,11 @@ export function PlayerManager() {
       <li
         key={p.id}
         className={`flex items-center gap-2 rounded-lg px-3 py-2 ${
-          p.active ? "bg-gray-50" : "bg-gray-50/60 opacity-60"
+          !p.active
+            ? "bg-gray-50/60 opacity-60"
+            : p.skippingRound
+              ? "bg-amber-50"
+              : "bg-gray-50"
         }`}
       >
         {editingId === p.id ? (
@@ -106,6 +111,33 @@ export function PlayerManager() {
                   strokeLinejoin="round"
                   strokeWidth={2}
                   d="M15.232 5.232l3.536 3.536M9 13l6.293-6.293a1 1 0 011.414 0l1.586 1.586a1 1 0 010 1.414L12 16H9v-3z"
+                />
+              </svg>
+            </button>
+            {/* Skip this round — voluntarily bench for next match */}
+            <button
+              onClick={() => toggleSkipRound(p.id)}
+              disabled={!!currentMatch}
+              title={p.skippingRound ? "Huỷ nghỉ lượt" : "Nghỉ lượt này"}
+              className={`p-1 rounded transition-colors ${
+                currentMatch
+                  ? "opacity-30 cursor-not-allowed"
+                  : p.skippingRound
+                    ? "text-amber-500 hover:text-amber-600"
+                    : "text-gray-400 hover:text-amber-500"
+              }`}
+            >
+              <svg
+                className="w-4 h-4"
+                fill={p.skippingRound ? "currentColor" : "none"}
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
                 />
               </svg>
             </button>

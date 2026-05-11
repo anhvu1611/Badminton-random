@@ -164,7 +164,7 @@ export function pickBestMatch(params: {
     lockedCourtIds = null,
   } = params;
 
-  const players = allPlayers.filter((p) => p.active);
+  const players = allPlayers.filter((p) => p.active && !p.skippingRound);
   if (players.length < 4) return null;
 
   // --- Stage A ---
